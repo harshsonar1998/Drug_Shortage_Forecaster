@@ -5,7 +5,7 @@
 
 ## 🌐 Live Interactive Dashboard
 
-👉 **[Open Dashboard](https://harshsonar1998.github.io/Drug_Shortage_Forecaster/)**
+👉 **[Open Dashboard](https://harshsonar1998.github.io/Drug_Shortage_Forecaster/index.html)**
 
 No installation needed — opens in any browser and fetches live FDA data directly. No Python, no servers.
 
