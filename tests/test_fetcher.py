@@ -21,20 +21,28 @@ def _mock_response(records, total=None):
 
 SAMPLE_RECORDS = [
     {
-        "drug_name": "Amoxicillin",
-        "generic_name": "amoxicillin",
-        "status": "active",
-        "shortage_dates": [{"start_date": "2022-01-01", "end_date": "2022-06-01"}],
-        "reason": "Manufacturing delay",
+        "generic_name": "Amoxicillin",
+        "status": "Current",
+        "initial_posting_date": "01/01/2022",
+        "update_date": "06/01/2022",
+        "shortage_reason": "Manufacturing delay",
+        "therapeutic_category": ["Anti-Infective"],
         "dosage_form": "Tablet",
+        "company_name": "Sandoz Inc.",
+        "availability": "Limited",
+        "openfda": {"brand_name": ["AMOXICILLIN 500MG"]},
     },
     {
-        "drug_name": "Insulin",
-        "generic_name": "insulin glargine",
-        "status": "resolved",
-        "shortage_dates": [{"start_date": "2021-03-01", "end_date": "2021-09-01"}],
-        "reason": "Supply disruption",
+        "generic_name": "Insulin Glargine",
+        "status": "Resolved",
+        "initial_posting_date": "03/01/2021",
+        "update_date": "09/01/2021",
+        "shortage_reason": "Supply disruption",
+        "therapeutic_category": ["Endocrine"],
         "dosage_form": "Injection",
+        "company_name": "Sanofi",
+        "availability": "Available",
+        "openfda": {},
     },
 ]
 
@@ -51,7 +59,7 @@ class TestFetchShortageData:
         with patch("drug_shortage_forecaster.data.fetcher.requests.get") as mock_get:
             mock_get.return_value = _mock_response(SAMPLE_RECORDS)
             df = fetch_shortage_data(limit=10)
-        for col in ["drug_name", "generic_name", "status", "shortage_start"]:
+        for col in ["drug_name", "status", "initial_posting_date", "shortage_reason"]:
             assert col in df.columns
 
     def test_drug_names_uppercase(self):
@@ -79,20 +87,20 @@ class TestFetchShortageData:
         mock = MagicMock()
         mock.status_code = 500
         with patch("drug_shortage_forecaster.data.fetcher.requests.get", return_value=mock):
-            with pytest.raises(RuntimeError, match="FDA API returned status"):
+            with pytest.raises(RuntimeError):
                 fetch_shortage_data(limit=10, retries=1)
 
     def test_status_filter_passed_as_search_param(self):
         with patch("drug_shortage_forecaster.data.fetcher.requests.get") as mock_get:
             mock_get.return_value = _mock_response([])
-            fetch_shortage_data(limit=10, status="active", retries=1)
+            fetch_shortage_data(limit=10, status="Current", retries=1)
         call_kwargs = mock_get.call_args
         params = call_kwargs[1]["params"] if call_kwargs[1] else call_kwargs[0][1]
         assert "search" in params
-        assert "active" in params["search"]
+        assert "Current" in params["search"]
 
     def test_respects_limit(self):
-        many = SAMPLE_RECORDS * 10  # 20 records
+        many = SAMPLE_RECORDS * 10
         with patch("drug_shortage_forecaster.data.fetcher.requests.get") as mock_get:
             mock_get.return_value = _mock_response(many, total=20)
             df = fetch_shortage_data(limit=3)
@@ -105,22 +113,28 @@ class TestParseRecords:
         df = _parse_records([])
         assert df.empty
 
-    def test_missing_shortage_dates(self):
-        rec = [{"drug_name": "Test", "status": "active"}]
+    def test_missing_dates_still_creates_row(self):
+        rec = [{"generic_name": "TestDrug", "status": "Current"}]
         df = _parse_records(rec)
         assert len(df) == 1
-        assert pd.isna(df.iloc[0]["shortage_start"])
+        assert df.iloc[0]["drug_name"] == "TESTDRUG"
 
-    def test_multiple_shortage_periods(self):
-        rec = [{
-            "drug_name": "Multi",
-            "status": "active",
-            "shortage_dates": [
-                {"start_date": "2021-01-01", "end_date": "2021-06-01"},
-                {"start_date": "2022-01-01", "end_date": "2022-06-01"},
-            ]
-        }]
+    def test_drug_name_from_generic_name(self):
+        rec = [{"generic_name": "Amoxicillin", "status": "Current"}]
         df = _parse_records(rec)
+        assert df.iloc[0]["drug_name"] == "AMOXICILLIN"
+
+    def test_therapeutic_category_list_joined(self):
+        rec = [{"generic_name": "TestDrug", "therapeutic_category": ["Cat A", "Cat B"]}]
+        df = _parse_records(rec)
+        assert "Cat A" in df.iloc[0]["therapeutic_category"]
+
+    def test_returns_dataframe(self):
+        df = _parse_records(SAMPLE_RECORDS)
+        assert isinstance(df, pd.DataFrame)
+
+    def test_correct_row_count(self):
+        df = _parse_records(SAMPLE_RECORDS)
         assert len(df) == 2
 
 

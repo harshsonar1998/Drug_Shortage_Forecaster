@@ -10,17 +10,18 @@ from drug_shortage_forecaster.data.processor import (
 
 
 def _make_df(drugs_and_dates):
-    """Helper: build a minimal shortage DataFrame."""
+    """Helper: build a minimal shortage DataFrame matching the real FDA structure."""
     rows = []
-    for drug, start, end in drugs_and_dates:
+    for drug, posting_date in drugs_and_dates:
         rows.append({
-            "drug_name": drug.upper(),
-            "generic_name": drug.lower(),
-            "status": "active",
-            "shortage_start": pd.Timestamp(start),
-            "shortage_end": pd.Timestamp(end),
-            "reason": "Test",
-            "dosage_form": "Tablet",
+            "drug_name":            drug.upper(),
+            "status":               "Current",
+            "initial_posting_date": pd.Timestamp(posting_date),
+            "shortage_reason":      "Test reason",
+            "therapeutic_category": "Anti-Infective",
+            "dosage_form":          "Tablet",
+            "company_name":         "Test Co",
+            "availability":         "Limited",
         })
     return pd.DataFrame(rows)
 
@@ -28,13 +29,16 @@ def _make_df(drugs_and_dates):
 @pytest.fixture
 def sample_df():
     return _make_df([
-        ("AMOXICILLIN", "2019-01-01", "2022-12-31"),
-        ("AMOXICILLIN", "2020-06-01", "2021-06-01"),
-        ("AMOXICILLIN", "2021-01-01", "2021-09-01"),
-        ("INSULIN", "2020-01-01", "2020-12-31"),
-        ("INSULIN", "2021-03-01", "2021-08-01"),
-        ("INSULIN", "2022-01-01", "2022-06-01"),
-        ("RARE_DRUG", "2021-01-01", "2021-03-01"),  # only 1 record
+        ("AMOXICILLIN", "2019-01-01"),
+        ("AMOXICILLIN", "2019-06-01"),
+        ("AMOXICILLIN", "2020-01-01"),
+        ("AMOXICILLIN", "2020-06-01"),
+        ("AMOXICILLIN", "2021-01-01"),
+        ("INSULIN",     "2020-01-01"),
+        ("INSULIN",     "2020-06-01"),
+        ("INSULIN",     "2021-01-01"),
+        ("INSULIN",     "2022-01-01"),
+        ("RARE_DRUG",   "2021-01-01"),  # only 1 record
     ])
 
 
@@ -95,8 +99,8 @@ class TestBuildShortageSeries:
 
     def test_custom_date_range(self, sample_df):
         s = build_shortage_series(sample_df, "AMOXICILLIN",
-                                  start="2021-01-01", end="2022-01-01")
-        assert s.index.min() >= pd.Timestamp("2021-01-01")
+                                  start="2020-01-01", end="2021-06-01")
+        assert s.index.min() >= pd.Timestamp("2020-01-01")
 
     def test_index_is_datetime(self, sample_df):
         s = build_shortage_series(sample_df, "AMOXICILLIN")

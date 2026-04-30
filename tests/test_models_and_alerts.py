@@ -28,18 +28,23 @@ def signal_30():
 
 @pytest.fixture
 def shortage_df():
-    """Minimal shortage DataFrame for detector tests."""
+    """Minimal shortage DataFrame matching the real FDA column structure."""
     rows = []
+    base_dates = [
+        "2018-01-01", "2019-01-01", "2020-01-01",
+        "2021-01-01", "2022-01-01", "2023-01-01",
+    ]
     for drug in ["AMOXICILLIN", "INSULIN", "LIDOCAINE", "MORPHINE"]:
-        for i in range(4):
+        for d in base_dates:
             rows.append({
-                "drug_name": drug,
-                "generic_name": drug.lower(),
-                "status": "active",
-                "shortage_start": pd.Timestamp(f"201{i+5}-01-01"),
-                "shortage_end":   pd.Timestamp(f"202{i}-12-31"),
-                "reason": "Test",
-                "dosage_form": "Tablet",
+                "drug_name":            drug,
+                "status":               "Current",
+                "initial_posting_date": pd.Timestamp(d),
+                "shortage_reason":      "Manufacturing delay",
+                "therapeutic_category": "Anti-Infective",
+                "dosage_form":          "Tablet",
+                "company_name":         "Test Co",
+                "availability":         "Limited",
             })
     return pd.DataFrame(rows)
 
@@ -81,7 +86,6 @@ class TestHistoricalVolModel:
             HistoricalVolModel(window=100).fit(signal_30)
 
     def test_annualized_by_sqrt12(self, signal_50):
-        """Output should equal rolling std * sqrt(12)."""
         window = 6
         out = HistoricalVolModel(window=window).fit(signal_50)
         expected = signal_50.rolling(window).std() * np.sqrt(12)
@@ -244,8 +248,9 @@ class TestRiskDetector:
 
     def test_empty_df_returns_empty_results(self):
         empty = pd.DataFrame(columns=[
-            "drug_name","generic_name","status",
-            "shortage_start","shortage_end","reason","dosage_form"
+            "drug_name", "status", "initial_posting_date",
+            "shortage_reason", "therapeutic_category",
+            "dosage_form", "company_name", "availability"
         ])
         det = RiskDetector()
         out = det.scan(empty)
