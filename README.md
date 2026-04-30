@@ -45,9 +45,6 @@ This package monitors the FDA drug shortage database and classifies every drug a
 
 | Property | Value |
 |----------|-------|
-| URL | https://api.fda.gov/drug/shortages.json |
-| Authentication | None required |
-| Format | JSON |
 | Coverage | All FDA-reported drug shortages |
 | Update frequency | Continuously updated by FDA |
 | Key fields used | generic_name, status, initial_posting_date, shortage_reason, therapeutic_category, company_name |
