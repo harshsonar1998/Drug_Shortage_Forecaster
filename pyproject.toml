@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drug-shortage-forecaster"
+version = "0.1.0"
+description = "FDA drug shortage early warning system using volatility modelling."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Your Name", email = "you@example.com"}]
+keywords = ["healthcare", "FDA", "drug shortage", "volatility", "forecasting"]
+
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scipy>=1.10",
+  "matplotlib>=3.7",
+  "requests>=2.28",
+  "streamlit>=1.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["drug_shortage_forecaster"]
+omit = ["tests/*", "scripts/*", "app.py"]
+
+[tool.coverage.report]
+show_missing = true

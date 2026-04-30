@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drug Shortage Intelligence Platform</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-base:     #080c14;
+  --bg-surface:  #0d1117;
+  --bg-card:     #111827;
+  --bg-elevated: #1a2234;
+  --bg-hover:    #1e2d45;
+  --border:      rgba(255,255,255,0.07);
+  --border-hover:rgba(255,255,255,0.14);
+  --text-primary:  #f0f4ff;
+  --text-secondary:#7d8fa8;
+  --text-muted:    #4a5568;
+  --accent-blue:   #3b82f6;
+  --accent-blue-dim:#1d4ed8;
+  --red:    #ef4444; --red-dim:    #7f1d1d; --red-glow:   rgba(239,68,68,0.15);
+  --amber:  #f59e0b; --amber-dim:  #78350f; --amber-glow: rgba(245,158,11,0.15);
+  --green:  #10b981; --green-dim:  #064e3b; --green-glow: rgba(16,185,129,0.15);
+  --blue:   #3b82f6; --blue-dim:   #1e3a8a; --blue-glow:  rgba(59,130,246,0.15);
+  --radius: 12px; --radius-lg: 16px; --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.6);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+.layout { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 260px; flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  overflow-y: auto; z-index: 100;
+}
+.sidebar-logo {
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 0 16px rgba(59,130,246,0.3);
+}
+.logo-text { line-height: 1.2; }
+.logo-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.logo-sub  { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
+
+.sidebar-section { padding: 1.25rem; border-bottom: 1px solid var(--border); }
+.sidebar-label {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 1rem;
+}
+.control-group { margin-bottom: 1rem; }
+.control-label {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;
+}
+.control-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--accent-blue); font-weight: 500;
+}
+input[type=range] {
+  width: 100%; height: 4px; border-radius: 2px;
+  background: var(--bg-elevated); outline: none;
+  -webkit-appearance: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--accent-blue);
+  border: 2px solid var(--bg-surface);
+  box-shadow: 0 0 8px rgba(59,130,246,0.5); cursor: pointer;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--accent-blue) var(--pct,50%), var(--bg-elevated) var(--pct,50%));
+  height: 4px; border-radius: 2px;
+}
+select {
+  width: 100%; background: var(--bg-elevated); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-size: 12px; outline: none; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+select:focus { border-color: var(--accent-blue); }
+
+.run-btn {
+  margin: 1.25rem; padding: 11px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white; border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer; width: calc(100% - 2.5rem);
+  letter-spacing: 0.3px; transition: all 0.2s; position: relative; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+}
+.run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(59,130,246,0.5); }
+.run-btn:active { transform: translateY(0); }
+.run-btn.loading { pointer-events: none; opacity: 0.8; }
+.run-btn .spinner {
+  display: none; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+  border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px;
+}
+.run-btn.loading .spinner { display: inline-block; }
+
+.sidebar-footer {
+  margin-top: auto; padding: 1.25rem;
+  font-size: 11px; color: var(--text-muted); line-height: 1.8;
+}
+.sidebar-footer a { color: #3b82f6; text-decoration: none; }
+
+/* ── MAIN ── */
+.main { margin-left: 260px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── TOPBAR ── */
+.topbar {
+  height: 56px; padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: rgba(13,17,23,0.8); backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 600; color: #10b981; letter-spacing: 0.8px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #10b981;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+.scan-time { font-size: 11px; color: var(--text-muted); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.deploy-btn {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text-secondary); padding: 6px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s; font-family: 'Inter', sans-serif;
+}
+.deploy-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.search-box {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text-primary); padding: 6px 12px 6px 32px;
+  border-radius: var(--radius-sm); font-size: 12px; width: 200px;
+  outline: none; font-family: 'Inter', sans-serif; position: relative;
+}
+.search-box:focus { border-color: var(--accent-blue); }
+.search-wrap { position: relative; }
+.search-wrap::before {
+  content: '⌕'; position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%); color: var(--text-muted); font-size: 14px; pointer-events: none;
+}
+
+/* ── CONTENT ── */
+.content { padding: 2rem; flex: 1; }
+
+/* ── HEADER ── */
+.page-header { margin-bottom: 1.75rem; }
+.page-title { font-size: 1.6rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: 0.4rem; }
+.page-sub   { font-size: 13px; color: var(--text-secondary); line-height: 1.6; max-width: 600px; }
+
+/* ── KPI CARDS ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 1.75rem; }
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+  position: relative; overflow: hidden; transition: all 0.2s; cursor: default;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.kpi-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-card.blue::before  { background: linear-gradient(90deg,#3b82f6,#06b6d4); }
+.kpi-card.red::before   { background: linear-gradient(90deg,#ef4444,#f97316); }
+.kpi-card.amber::before { background: linear-gradient(90deg,#f59e0b,#eab308); }
+.kpi-card.green::before { background: linear-gradient(90deg,#10b981,#34d399); }
+.kpi-glow {
+  position: absolute; top: 0; right: 0; width: 80px; height: 80px;
+  border-radius: 50%; filter: blur(30px); opacity: 0.12;
+}
+.kpi-card.blue  .kpi-glow { background: #3b82f6; }
+.kpi-card.red   .kpi-glow { background: #ef4444; }
+.kpi-card.amber .kpi-glow { background: #f59e0b; }
+.kpi-card.green .kpi-glow { background: #10b981; }
+.kpi-label { font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.6rem; }
+.kpi-value { font-size: 2.4rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.kpi-card.blue  .kpi-value { color: #60a5fa; }
+.kpi-card.red   .kpi-value { color: #f87171; }
+.kpi-card.amber .kpi-value { color: #fbbf24; }
+.kpi-card.green .kpi-value { color: #34d399; }
+.kpi-sub { font-size: 11px; color: var(--text-muted); }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+.tab {
+  padding: 10px 18px; font-size: 13px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.15s; border-radius: 6px 6px 0 0;
+}
+.tab:hover { color: var(--text-secondary); background: rgba(255,255,255,0.02); }
+.tab.active { color: var(--text-primary); border-bottom-color: var(--accent-blue); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── TWO-COL LAYOUT ── */
+.two-col { display: grid; grid-template-columns: 1.8fr 1fr; gap: 1.25rem; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.panel-header {
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.panel-body { padding: 1.25rem; }
+
+/* ── TABLE ── */
+.risk-table { width: 100%; border-collapse: collapse; }
+.risk-table th {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 12px;
+  text-align: left; border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+.risk-table td {
+  padding: 11px 12px; font-size: 12px; color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.risk-table tr:hover td { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+.risk-table tr:last-child td { border-bottom: none; }
+.drug-name-cell { color: var(--text-primary) !important; font-weight: 500; font-size: 12px !important; }
+.vol-cell { font-family: 'JetBrains Mono', monospace; font-size: 11px !important; }
+.risk-pill {
+  display: inline-block; padding: 3px 9px; border-radius: 20px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+}
+.risk-pill.HIGH   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3);  }
+.risk-pill.MEDIUM { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+.risk-pill.LOW    { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+.model-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
+
+/* ── CHART PANEL ── */
+.chart-wrap { position: relative; height: 220px; display: flex; align-items: center; justify-content: center; }
+.donut-center {
+  position: absolute; text-align: center; pointer-events: none;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+.donut-number { font-size: 2.2rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.donut-label  { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; margin-top: 2px; }
+
+/* ── LEGEND ── */
+.legend { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+.legend-item { display: flex; align-items: center; justify-content: space-between; }
+.legend-left { display: flex; align-items: center; gap: 8px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.legend-name { font-size: 12px; color: var(--text-secondary); }
+.legend-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  font-weight: 600; padding: 2px 8px; border-radius: 5px;
+}
+.legend-count.high   { color: #f87171; background: rgba(239,68,68,0.12); }
+.legend-count.medium { color: #fbbf24; background: rgba(245,158,11,0.12); }
+.legend-count.low    { color: #34d399; background: rgba(16,185,129,0.12); }
+
+/* ── TOP ALERTS ── */
+.alert-list { display: flex; flex-direction: column; gap: 6px; margin-top: 1rem; }
+.alert-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  transition: all 0.15s; cursor: default;
+}
+.alert-item:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+.alert-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.alert-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.alert-info { min-width: 0; }
+.alert-name { font-size: 12px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.alert-meta { font-size: 10px; color: var(--text-muted); }
+.alert-vol  { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; flex-shrink: 0; }
+
+/* ── BAR CHART ── */
+.bar-chart { display: flex; flex-direction: column; gap: 8px; margin-top: 0.75rem; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-name { font-size: 11px; color: var(--text-secondary); width: 110px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.bar-track { flex: 1; height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+.bar-val   { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); width: 20px; }
+
+/* ── DRUG ANALYSIS TAB ── */
+.drug-select-row { display: flex; gap: 12px; margin-bottom: 1.25rem; align-items: center; }
+.drug-search-input {
+  flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-primary); padding: 9px 12px;
+  border-radius: var(--radius-sm); font-size: 12px; outline: none;
+  font-family: 'Inter', sans-serif;
+}
+.drug-search-input:focus { border-color: var(--accent-blue); }
+.drug-select-el {
+  flex: 2; background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-primary); padding: 9px 12px;
+  border-radius: var(--radius-sm); font-size: 12px; outline: none;
+  font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.drug-select-el:focus { border-color: var(--accent-blue); }
+
+.drug-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.25rem;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.drug-card-name { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.drug-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.drug-pill {
+  background: var(--bg-elevated); color: var(--text-secondary);
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+}
+.drug-reason { font-size: 12px; color: var(--text-muted); }
+.drug-vol-box { text-align: right; flex-shrink: 0; margin-left: 1.5rem; }
+.drug-risk-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 8px; }
+.drug-vol-num { font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+.drug-vol-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+.chart-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; }
+.chart-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; }
+.vol-chart-wrap { height: 220px; position: relative; }
+
+/* ── RAW DATA ── */
+.filter-row { display: flex; gap: 10px; margin-bottom: 1.25rem; }
+.filter-input {
+  flex: 2; background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm);
+  font-size: 12px; outline: none; font-family: 'Inter', sans-serif;
+}
+.filter-input:focus { border-color: var(--accent-blue); }
+.filter-select {
+  flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm);
+  font-size: 12px; outline: none; font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.raw-table-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border); }
+.raw-table { width: 100%; border-collapse: collapse; }
+.raw-table th {
+  font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.8px; padding: 10px 14px; text-align: left;
+  background: var(--bg-surface); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.raw-table td {
+  padding: 10px 14px; font-size: 12px; color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.04); max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.raw-table tr:hover td { background: rgba(255,255,255,0.03); }
+.raw-table tr:last-child td { border-bottom: none; }
+.record-count { font-size: 11px; color: var(--text-muted); margin-bottom: 0.75rem; }
+
+/* ── EMPTY / LOADING ── */
+.empty-state {
+  text-align: center; padding: 4rem 2rem;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.empty-icon  { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-title { font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; }
+.empty-sub   { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+.step-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 1.5rem; }
+.step-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem;
+}
+.step-num   { font-size: 10px; font-weight: 700; color: var(--accent-blue); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem; }
+.step-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; }
+.step-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+/* ── EXPORT BTN ── */
+.export-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text-secondary); padding: 7px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  font-family: 'Inter', sans-serif; text-decoration: none;
+}
+.export-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  padding: 12px 18px; border-radius: var(--radius-sm); font-size: 13px;
+  color: var(--text-primary); box-shadow: var(--shadow-lg); z-index: 999;
+  transform: translateY(80px); opacity: 0; transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn 0.4s ease; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">💊</div>
+    <div class="logo-text">
+      <div class="logo-name">DSI Platform</div>
+      <div class="logo-sub">Drug Shortage Intelligence</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Data Source</div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>Records to fetch</span>
+        <span class="control-value" id="val-records">500</span>
+      </div>
+      <input type="range" min="100" max="2000" value="500" step="100" id="sl-records"
+             oninput="updateSlider(this,'val-records',this.value)">
+    </div>
+    <div class="control-group">
+      <div class="control-label"><span>Shortage status</span></div>
+      <select id="sel-status">
+        <option value="">All</option>
+        <option value="Current">Current</option>
+        <option value="Resolved">Resolved</option>
+        <option value="Discontinued">Discontinued</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Models</div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>EWMA decay (λ)</span>
+        <span class="control-value" id="val-lam">0.80</span>
+      </div>
+      <input type="range" min="0.5" max="0.99" value="0.80" step="0.01" id="sl-lam"
+             oninput="updateSlider(this,'val-lam',parseFloat(this.value).toFixed(2))">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>HV window (months)</span>
+        <span class="control-value" id="val-hv">6</span>
+      </div>
+      <input type="range" min="3" max="18" value="6" step="1" id="sl-hv"
+             oninput="updateSlider(this,'val-hv',this.value)">
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Risk Thresholds</div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>HIGH threshold</span>
+        <span class="control-value" id="val-high">1.50</span>
+      </div>
+      <input type="range" min="0.5" max="3.0" value="1.5" step="0.1" id="sl-high"
+             oninput="updateSlider(this,'val-high',parseFloat(this.value).toFixed(2))">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>MEDIUM threshold</span>
+        <span class="control-value" id="val-med">0.50</span>
+      </div>
+      <input type="range" min="0.1" max="1.4" value="0.5" step="0.05" id="sl-med"
+             oninput="updateSlider(this,'val-med',parseFloat(this.value).toFixed(2))">
+    </div>
+    <div class="control-group">
+      <div class="control-label">
+        <span>Min records per drug</span>
+        <span class="control-value" id="val-min">2</span>
+      </div>
+      <input type="range" min="1" max="10" value="2" step="1" id="sl-min"
+             oninput="updateSlider(this,'val-min',this.value)">
+    </div>
+  </div>
+
+  <button class="run-btn" id="run-btn" onclick="runAnalysis()">
+    <span class="spinner" id="spinner"></span>
+    <span id="btn-text">Run Analysis</span>
+  </button>
+
+  <div class="sidebar-footer">
+    Data from <a href="https://open.fda.gov/apis/drug/shortages/" target="_blank">FDA openFDA API</a><br>
+    No API key required<br><br>
+    ORIE 5270 · Cornell University
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        LIVE FDA DATA · REAL-TIME ANALYSIS
+      </div>
+      <span class="scan-time" id="scan-time"></span>
+    </div>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <input class="search-box" type="text" id="global-search" placeholder="Search drugs..." oninput="globalSearch(this.value)">
+      </div>
+      <button class="deploy-btn">Deploy ↗</button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="page-header">
+      <div class="page-title">Drug Shortage Intelligence Platform</div>
+      <div class="page-sub">Monitors FDA shortage records and forecasts supply disruption risk using volatility modelling — the same mathematics used in financial risk management, applied to healthcare supply chains.</div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Total Drugs</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub" id="kpi-total-sub">run analysis to begin</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">High Risk</div>
+        <div class="kpi-value" id="kpi-high">—</div>
+        <div class="kpi-sub" id="kpi-high-sub">volatility above threshold</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Medium Risk</div>
+        <div class="kpi-value" id="kpi-med">—</div>
+        <div class="kpi-sub" id="kpi-med-sub">moderate volatility</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Low Risk</div>
+        <div class="kpi-value" id="kpi-low">—</div>
+        <div class="kpi-sub" id="kpi-low-sub">stable supply</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('overview')">Risk Overview</div>
+      <div class="tab" onclick="switchTab('analysis')">Drug Analysis</div>
+      <div class="tab" onclick="switchTab('raw')">Raw Data</div>
+    </div>
+
+    <!-- TAB: RISK OVERVIEW -->
+    <div class="tab-panel active" id="tab-overview">
+      <div id="overview-empty" class="empty-state">
+        <div class="empty-icon">🔬</div>
+        <div class="empty-title">No analysis yet</div>
+        <div class="empty-sub">Configure settings in the sidebar and click <strong>Run Analysis</strong> to fetch live FDA data and classify drug shortage risk.</div>
+        <div class="step-cards">
+          <div class="step-card"><div class="step-num">Step 01</div><div class="step-title">Live FDA Data</div><div class="step-desc">Pulls directly from the FDA openFDA API. No downloads, no stale data.</div></div>
+          <div class="step-card"><div class="step-num">Step 02</div><div class="step-title">Volatility Modelling</div><div class="step-desc">EWMA and Historical Volatility applied to monthly shortage signals.</div></div>
+          <div class="step-card"><div class="step-num">Step 03</div><div class="step-title">Risk Classification</div><div class="step-desc">Every drug classified HIGH, MEDIUM, or LOW risk. Export as CSV.</div></div>
+        </div>
+      </div>
+      <div id="overview-content" style="display:none;">
+        <div class="two-col">
+          <div>
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">Drug Risk Rankings</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <select id="risk-filter" onchange="renderTable()" style="font-size:11px;padding:4px 8px;border-radius:5px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-secondary);">
+                    <option value="ALL">All Risks</option>
+                    <option value="HIGH">High Only</option>
+                    <option value="MEDIUM">Medium Only</option>
+                    <option value="LOW">Low Only</option>
+                  </select>
+                  <button class="export-btn" onclick="exportCSV()">↓ Export CSV</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto;">
+                <table class="risk-table">
+                  <thead>
+                    <tr>
+                      <th>Drug Name</th>
+                      <th>Volatility</th>
+                      <th>Risk Level</th>
+                      <th>Records</th>
+                      <th>Model</th>
+                    </tr>
+                  </thead>
+                  <tbody id="risk-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:1.25rem;">
+            <div class="panel">
+              <div class="panel-header"><div class="panel-title">Risk Distribution</div></div>
+              <div class="panel-body">
+                <div class="chart-wrap">
+                  <canvas id="donut-chart" width="180" height="180"></canvas>
+                  <div class="donut-center">
+                    <div class="donut-number" id="donut-total">0</div>
+                    <div class="donut-label">drugs</div>
+                  </div>
+                </div>
+                <div class="legend" id="risk-legend"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><div class="panel-title">Top Alerts</div></div>
+              <div class="panel-body" style="padding-top:0.5rem;">
+                <div class="alert-list" id="alert-list"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><div class="panel-title">By Category</div></div>
+              <div class="panel-body">
+                <div class="bar-chart" id="cat-bar-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: DRUG ANALYSIS -->
+    <div class="tab-panel" id="tab-analysis">
+      <div class="drug-select-row">
+        <input class="drug-search-input" type="text" placeholder="Search drug..." oninput="filterDrugSelect(this.value)">
+        <select class="drug-select-el" id="drug-select" onchange="showDrugDetail(this.value)">
+          <option value="">-- Select a drug --</option>
+        </select>
+      </div>
+      <div id="drug-detail"></div>
+      <div id="drug-empty" class="empty-state">
+        <div class="empty-icon">💊</div>
+        <div class="empty-title">Select a drug to analyse</div>
+        <div class="empty-sub">Run the analysis first, then select any drug from the dropdown to see its volatility chart and shortage history.</div>
+      </div>
+    </div>
+
+    <!-- TAB: RAW DATA -->
+    <div class="tab-panel" id="tab-raw">
+      <div class="filter-row">
+        <input class="filter-input" type="text" placeholder="Filter by drug name..." oninput="filterRaw()">
+        <select class="filter-select" id="status-filter-raw" onchange="filterRaw()">
+          <option value="">All statuses</option>
+        </select>
+        <select class="filter-select" id="cat-filter-raw" onchange="filterRaw()">
+          <option value="">All categories</option>
+        </select>
+        <button class="export-btn" onclick="exportRawCSV()">↓ Export CSV</button>
+      </div>
+      <div class="record-count" id="raw-count"></div>
+      <div class="raw-table-wrap">
+        <table class="raw-table">
+          <thead>
+            <tr>
+              <th>Drug Name</th><th>Status</th><th>Category</th>
+              <th>Company</th><th>Dosage Form</th><th>Reason</th><th>Posted</th>
+            </tr>
+          </thead>
+          <tbody id="raw-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let rawData = [], analysisResults = [], donutChart = null, volChart = null;
+const FDA_URL = 'https://api.fda.gov/drug/shortages.json';
+
+// ── SLIDER UTIL ────────────────────────────────────────────────────────────
+function updateSlider(el, valId, val) {
+  document.getElementById(valId).textContent = val;
+  const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+}
+document.querySelectorAll('input[type=range]').forEach(el => {
+  const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+});
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['overview','analysis','raw'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg, dur=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── FDA FETCH ──────────────────────────────────────────────────────────────
+async function fetchFDA(limit, status) {
+  const records = [];
+  let skip = 0;
+  const perReq = 100;
+  while (records.length < limit) {
+    const need = Math.min(perReq, limit - records.length);
+    let url = `${FDA_URL}?limit=${need}&skip=${skip}`;
+    if (status) url += `&search=status:"${status}"`;
+    const res = await fetch(url);
+    if (!res.ok) { if (res.status === 404) break; throw new Error('FDA API error ' + res.status); }
+    const data = await res.json();
+    const results = data.results || [];
+    if (!results.length) break;
+    records.push(...results);
+    skip += results.length;
+    const total = data.meta?.results?.total || 0;
+    if (skip >= total) break;
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return records.slice(0, limit);
+}
+
+function parseRecords(records) {
+  return records.map(r => {
+    const tc = Array.isArray(r.therapeutic_category) ? r.therapeutic_category.join(', ') : (r.therapeutic_category || '');
+    const openfda = r.openfda || {};
+    const brand = Array.isArray(openfda.brand_name) ? openfda.brand_name[0] : '';
+    return {
+      drug_name:    (r.generic_name || brand || '').toUpperCase().trim(),
+      brand_name:   brand,
+      status:       r.status || 'Unknown',
+      posted:       r.initial_posting_date || '',
+      updated:      r.update_date || '',
+      reason:       r.shortage_reason || '',
+      category:     tc,
+      dosage_form:  r.dosage_form || '',
+      company:      r.company_name || '',
+      availability: r.availability || '',
+    };
+  }).filter(r => r.drug_name.length > 0);
+}
+
+// ── VOLATILITY MODELS ──────────────────────────────────────────────────────
+function buildSignal(records, drugName) {
+  const drug = drugName.toUpperCase().trim();
+  const subset = records.filter(r => r.drug_name === drug);
+  if (!subset.length) return null;
+
+  const dates = subset.map(r => r.posted).filter(Boolean).map(d => {
+    try { return new Date(d); } catch { return null; }
+  }).filter(Boolean);
+  if (!dates.length) return null;
+
+  const minD = new Date(Math.min(...dates));
+  const maxD = new Date();
+  minD.setDate(1);
+
+  const months = [];
+  const cur = new Date(minD);
+  while (cur <= maxD) {
+    months.push(new Date(cur));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  if (months.length < 3) return null;
+
+  const counts = months.map(m => {
+    return subset.filter(r => {
+      if (!r.posted) return false;
+      try {
+        const d = new Date(r.posted);
+        return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
+      } catch { return false; }
+    }).length;
+  });
+
+  const eps = 1e-6;
+  const logC = counts.map(c => Math.log(c + eps));
+  const changes = [];
+  for (let i = 1; i < logC.length; i++) changes.push(logC[i] - logC[i-1]);
+  if (changes.length < 2) return null;
+
+  return { changes, months: months.slice(1), counts: counts.slice(1) };
+}
+
+function ewmaVol(changes, lam) {
+  const r = changes;
+  const vols = new Array(r.length);
+  vols[0] = r[0] * r[0];
+  for (let i = 1; i < r.length; i++) {
+    vols[i] = lam * vols[i-1] + (1 - lam) * r[i-1] * r[i-1];
+  }
+  return vols.map(v => Math.sqrt(Math.max(v, 0) * 12));
+}
+
+function hvVol(changes, window) {
+  const vols = [];
+  for (let i = window - 1; i < changes.length; i++) {
+    const slice = changes.slice(i - window + 1, i + 1);
+    const mean = slice.reduce((a,b)=>a+b,0)/slice.length;
+    const variance = slice.reduce((a,b)=>a+(b-mean)**2,0)/slice.length;
+    vols.push(Math.sqrt(variance * 12));
+  }
+  return vols;
+}
+
+function classifyRisk(vol, highT, medT) {
+  if (vol > highT) return 'HIGH';
+  if (vol > medT)  return 'MEDIUM';
+  return 'LOW';
+}
+
+// ── ANALYSIS ───────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const btn    = document.getElementById('run-btn');
+  const spn    = document.getElementById('spinner');
+  const btntxt = document.getElementById('btn-text');
+
+  btn.classList.add('loading');
+  spn.style.display = 'inline-block';
+  btntxt.textContent = 'Fetching data...';
+
+  try {
+    const limit  = parseInt(document.getElementById('sl-records').value);
+    const status = document.getElementById('sel-status').value;
+    const lam    = parseFloat(document.getElementById('sl-lam').value);
+    const hv     = parseInt(document.getElementById('sl-hv').value);
+    const highT  = parseFloat(document.getElementById('sl-high').value);
+    const medT   = parseFloat(document.getElementById('sl-med').value);
+    const minRec = parseInt(document.getElementById('sl-min').value);
+
+    btntxt.textContent = 'Fetching FDA data...';
+    const raw = await fetchFDA(limit, status);
+    rawData = parseRecords(raw);
+
+    btntxt.textContent = 'Running models...';
+    await new Promise(r => setTimeout(r, 50));
+
+    const drugs = {};
+    rawData.forEach(r => { drugs[r.drug_name] = (drugs[r.drug_name]||0)+1; });
+    const eligible = Object.entries(drugs).filter(([,c])=>c>=minRec).map(([d])=>d);
+
+    analysisResults = [];
+    for (const drug of eligible) {
+      const sig = buildSignal(rawData, drug);
+      if (!sig || sig.changes.length < 2) continue;
+      const vols = ewmaVol(sig.changes, lam);
+      if (!vols.length) continue;
+      const latestVol = vols[vols.length - 1];
+      const risk = classifyRisk(latestVol, highT, medT);
+      analysisResults.push({
+        drug_name:   drug,
+        current_vol: latestVol,
+        risk_level:  risk,
+        n_shortages: drugs[drug],
+        model:       `EWMA(λ=${lam.toFixed(2)})`,
+        signal:      sig, vols, lam, hv, highT, medT,
+      });
+    }
+    analysisResults.sort((a,b) => b.current_vol - a.current_vol);
+
+    const nH = analysisResults.filter(r=>r.risk_level==='HIGH').length;
+    const nM = analysisResults.filter(r=>r.risk_level==='MEDIUM').length;
+    const nL = analysisResults.filter(r=>r.risk_level==='LOW').length;
+    const nT = analysisResults.length;
+
+    // KPIs
+    document.getElementById('kpi-total').textContent = nT;
+    document.getElementById('kpi-high').textContent  = nH;
+    document.getElementById('kpi-med').textContent   = nM;
+    document.getElementById('kpi-low').textContent   = nL;
+    document.getElementById('kpi-total-sub').textContent = `from ${rawData.length.toLocaleString()} FDA records`;
+    document.getElementById('kpi-high-sub').textContent  = `volatility > ${highT.toFixed(2)}`;
+    document.getElementById('kpi-med-sub').textContent   = `${medT.toFixed(2)} – ${highT.toFixed(2)}`;
+    document.getElementById('kpi-low-sub').textContent   = `volatility < ${medT.toFixed(2)}`;
+
+    document.getElementById('scan-time').textContent =
+      'Last scan: ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+    renderTable();
+    renderDonut(nH, nM, nL, nT);
+    renderAlerts();
+    renderCategoryChart();
+    populateDrugSelect();
+    populateRawFilters();
+    renderRawTable(rawData);
+
+    document.getElementById('overview-empty').style.display = 'none';
+    document.getElementById('overview-content').style.display = 'block';
+    document.getElementById('overview-content').classList.add('fade-in');
+
+    showToast(`✓ Analysis complete — ${nT} drugs assessed`);
+  } catch(e) {
+    showToast('Error: ' + e.message, 5000);
+    console.error(e);
+  } finally {
+    btn.classList.remove('loading');
+    spn.style.display = 'none';
+    btntxt.textContent = 'Run Analysis';
+  }
+}
+
+// ── RENDER TABLE ───────────────────────────────────────────────────────────
+function renderTable() {
+  const filter = document.getElementById('risk-filter').value;
+  const rows = analysisResults.filter(r => filter === 'ALL' || r.risk_level === filter);
+  const body = document.getElementById('risk-table-body');
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td class="drug-name-cell">${r.drug_name}</td>
+      <td class="vol-cell">${r.current_vol.toFixed(4)}</td>
+      <td><span class="risk-pill ${r.risk_level}">${r.risk_level}</span></td>
+      <td style="color:var(--text-muted)">${r.n_shortages}</td>
+      <td class="model-tag">${r.model}</td>
+    </tr>
+  `).join('');
+}
+
+// ── DONUT CHART ────────────────────────────────────────────────────────────
+function renderDonut(nH, nM, nL, nT) {
+  document.getElementById('donut-total').textContent = nT;
+  const ctx = document.getElementById('donut-chart').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['High','Medium','Low'],
+      datasets: [{
+        data: [nH||0.01, nM||0.01, nL||0.01],
+        backgroundColor: ['rgba(239,68,68,0.85)','rgba(245,158,11,0.85)','rgba(16,185,129,0.85)'],
+        borderColor: ['#111827'],
+        borderWidth: 3, hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#1a2234', borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1, titleColor: '#f0f4ff', bodyColor: '#7d8fa8',
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw === 0.01 ? 0 : ctx.raw}` }
+      }},
+      animation: { animateRotate: true, duration: 900, easing: 'easeInOutQuart' },
+    }
+  });
+
+  document.getElementById('risk-legend').innerHTML = [
+    { label:'High Risk',   count:nH, cls:'high',   color:'#ef4444' },
+    { label:'Medium Risk', count:nM, cls:'medium',  color:'#f59e0b' },
+    { label:'Low Risk',    count:nL, cls:'low',     color:'#10b981' },
+  ].map(l => `
+    <div class="legend-item">
+      <div class="legend-left">
+        <div class="legend-dot" style="background:${l.color}"></div>
+        <span class="legend-name">${l.label}</span>
+      </div>
+      <span class="legend-count ${l.cls}">${l.count}</span>
+    </div>
+  `).join('');
+}
+
+// ── ALERTS ─────────────────────────────────────────────────────────────────
+function renderAlerts() {
+  const top = analysisResults.filter(r=>r.risk_level==='HIGH').slice(0,6);
+  const dotC  = {HIGH:'#ef4444',MEDIUM:'#f59e0b',LOW:'#10b981'};
+  const bgC   = {HIGH:'rgba(239,68,68,0.12)',MEDIUM:'rgba(245,158,11,0.12)',LOW:'rgba(16,185,129,0.12)'};
+  const txtC  = {HIGH:'#f87171',MEDIUM:'#fbbf24',LOW:'#34d399'};
+  document.getElementById('alert-list').innerHTML = top.map(r => `
+    <div class="alert-item" onclick="jumpToDrug('${r.drug_name}')">
+      <div class="alert-left">
+        <div class="alert-dot" style="background:${dotC[r.risk_level]}"></div>
+        <div class="alert-info">
+          <div class="alert-name">${r.drug_name}</div>
+          <div class="alert-meta">${r.n_shortages} records</div>
+        </div>
+      </div>
+      <div class="alert-vol" style="background:${bgC[r.risk_level]};color:${txtC[r.risk_level]}">
+        ${r.current_vol.toFixed(3)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function jumpToDrug(name) {
+  switchTab('analysis');
+  document.getElementById('drug-select').value = name;
+  showDrugDetail(name);
+}
+
+// ── CATEGORY BARS ──────────────────────────────────────────────────────────
+function renderCategoryChart() {
+  const counts = {};
+  rawData.forEach(r => { if (r.category) counts[r.category] = (counts[r.category]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if (!sorted.length) return;
+  const max = sorted[0][1];
+  document.getElementById('cat-bar-chart').innerHTML = sorted.map(([name,val]) => `
+    <div class="bar-row">
+      <div class="bar-name" title="${name}">${name}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:linear-gradient(90deg,#3b82f6,#06b6d4)"></div>
+      </div>
+      <div class="bar-val">${val}</div>
+    </div>
+  `).join('');
+}
+
+// ── DRUG SELECT ────────────────────────────────────────────────────────────
+function populateDrugSelect() {
+  const sel = document.getElementById('drug-select');
+  sel.innerHTML = '<option value="">-- Select a drug --</option>' +
+    analysisResults.map(r => `<option value="${r.drug_name}">${r.drug_name}</option>`).join('');
+}
+
+function filterDrugSelect(q) {
+  const sel = document.getElementById('drug-select');
+  const val = q.toUpperCase();
+  Array.from(sel.options).forEach(o => {
+    o.hidden = (o.value && !o.value.includes(val));
+  });
+}
+
+function showDrugDetail(drugName) {
+  if (!drugName) {
+    document.getElementById('drug-detail').innerHTML = '';
+    document.getElementById('drug-empty').style.display = 'block';
+    return;
+  }
+  const r = analysisResults.find(x => x.drug_name === drugName);
+  const rawRows = rawData.filter(x => x.drug_name === drugName);
+  if (!r) return;
+
+  document.getElementById('drug-empty').style.display = 'none';
+
+  const dotC  = {HIGH:'#ef4444',MEDIUM:'#f59e0b',LOW:'#10b981'};
+  const bgC   = {HIGH:'rgba(239,68,68,0.12)',MEDIUM:'rgba(245,158,11,0.12)',LOW:'rgba(16,185,129,0.12)'};
+  const txtC  = {HIGH:'#f87171',MEDIUM:'#fbbf24',LOW:'#34d399'};
+  const cat    = rawRows[0]?.category || '';
+  const co     = rawRows[0]?.company  || '';
+  const reason = rawRows[0]?.reason   || '';
+
+  const pills = [
+    cat  ? `<span class="drug-pill">${cat}</span>` : '',
+    co   ? `<span class="drug-pill">${co}</span>` : '',
+    `<span class="drug-pill">${r.n_shortages} records</span>`,
+  ].join('');
+
+  document.getElementById('drug-detail').innerHTML = `
+    <div class="drug-card fade-in">
+      <div>
+        <div class="drug-card-name">${r.drug_name}</div>
+        <div class="drug-pills">${pills}</div>
+        ${reason ? `<div class="drug-reason"><b style="color:var(--text-secondary)">Reason:</b> ${reason}</div>` : ''}
+      </div>
+      <div class="drug-vol-box">
+        <div class="drug-risk-badge" style="background:${bgC[r.risk_level]};color:${txtC[r.risk_level]}">
+          ${r.risk_level} RISK
+        </div>
+        <div class="drug-vol-num" style="color:${dotC[r.risk_level]}">${r.current_vol.toFixed(4)}</div>
+        <div class="drug-vol-label">volatility score</div>
+      </div>
+    </div>
+    <div class="chart-container fade-in">
+      <div class="chart-title">Shortage Activity & Volatility Over Time</div>
+      <div class="vol-chart-wrap"><canvas id="vol-chart"></canvas></div>
+    </div>
+    <div class="panel fade-in">
+      <div class="panel-header"><div class="panel-title">Shortage Records</div></div>
+      <div style="overflow-x:auto;">
+        <table class="raw-table">
+          <thead><tr><th>Status</th><th>Posted</th><th>Updated</th><th>Dosage Form</th><th>Reason</th></tr></thead>
+          <tbody>${rawRows.slice(0,20).map(row=>`
+            <tr>
+              <td><span class="risk-pill ${row.status==='Current'?'HIGH':row.status==='Resolved'?'LOW':'MEDIUM'}">${row.status}</span></td>
+              <td style="font-family:monospace;font-size:11px">${row.posted}</td>
+              <td style="font-family:monospace;font-size:11px">${row.updated}</td>
+              <td>${row.dosage_form}</td>
+              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${row.reason}">${row.reason}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Draw vol chart
+  setTimeout(() => {
+    const ctx2 = document.getElementById('vol-chart')?.getContext('2d');
+    if (!ctx2) return;
+    if (volChart) volChart.destroy();
+    const sig   = r.signal;
+    const vols  = r.vols;
+    const labels = sig.months.slice(sig.months.length - vols.length).map(m =>
+      m.toLocaleDateString('en-US', {month:'short', year:'2-digit'})
+    );
+    volChart = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: `EWMA(λ=${r.lam.toFixed(2)})`,
+            data: vols,
+            borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)',
+            borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4,
+          },
+          {
+            label: `High threshold (${r.highT})`,
+            data: new Array(vols.length).fill(r.highT),
+            borderColor: 'rgba(239,68,68,0.35)', borderWidth: 1,
+            borderDash: [4,4], fill: false, pointRadius: 0,
+          },
+          {
+            label: `Medium threshold (${r.medT})`,
+            data: new Array(vols.length).fill(r.medT),
+            borderColor: 'rgba(245,158,11,0.35)', borderWidth: 1,
+            borderDash: [4,4], fill: false, pointRadius: 0,
+          },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true, position: 'top',
+            labels: { color: '#7d8fa8', font: { size: 10 }, boxWidth: 12, padding: 14 }
+          },
+          tooltip: {
+            backgroundColor:'#1a2234', borderColor:'rgba(255,255,255,0.1)',
+            borderWidth:1, titleColor:'#f0f4ff', bodyColor:'#7d8fa8',
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}` }
+          }
+        },
+        scales: {
+          x: { grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#4a5568', font:{size:9}, maxTicksLimit:10 } },
+          y: { grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#4a5568', font:{size:9} }, beginAtZero: true }
+        },
+        animation: { duration: 600 },
+      }
+    });
+  }, 100);
+}
+
+// ── RAW DATA ───────────────────────────────────────────────────────────────
+function populateRawFilters() {
+  const statuses = [...new Set(rawData.map(r=>r.status).filter(Boolean))].sort();
+  const cats     = [...new Set(rawData.map(r=>r.category).filter(Boolean))].sort();
+  document.getElementById('status-filter-raw').innerHTML =
+    '<option value="">All statuses</option>' + statuses.map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('cat-filter-raw').innerHTML =
+    '<option value="">All categories</option>' + cats.slice(0,30).map(c=>`<option>${c}</option>`).join('');
+}
+
+function filterRaw() {
+  const q   = document.querySelector('.filter-input').value.toUpperCase();
+  const st  = document.getElementById('status-filter-raw').value;
+  const cat = document.getElementById('cat-filter-raw').value;
+  const filtered = rawData.filter(r =>
+    (!q   || r.drug_name.includes(q)) &&
+    (!st  || r.status === st) &&
+    (!cat || r.category === cat)
+  );
+  renderRawTable(filtered);
+}
+
+function renderRawTable(data) {
+  document.getElementById('raw-count').textContent =
+    `Showing ${data.length.toLocaleString()} of ${rawData.length.toLocaleString()} records`;
+  document.getElementById('raw-table-body').innerHTML = data.slice(0,200).map(r => `
+    <tr>
+      <td style="color:var(--text-primary);font-weight:500">${r.drug_name}</td>
+      <td><span class="risk-pill ${r.status==='Current'?'HIGH':r.status==='Resolved'?'LOW':'MEDIUM'}">${r.status}</span></td>
+      <td>${r.category}</td><td>${r.company}</td>
+      <td>${r.dosage_form}</td>
+      <td title="${r.reason}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.reason}</td>
+      <td style="font-family:monospace;font-size:11px;white-space:nowrap;">${r.posted}</td>
+    </tr>
+  `).join('');
+}
+
+// ── SEARCH ─────────────────────────────────────────────────────────────────
+function globalSearch(q) {
+  if (!q) return;
+  const match = analysisResults.find(r => r.drug_name.includes(q.toUpperCase()));
+  if (match) { jumpToDrug(match.drug_name); }
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const filter = document.getElementById('risk-filter').value;
+  const rows = analysisResults.filter(r => filter==='ALL' || r.risk_level===filter);
+  const csv = 'Drug Name,Volatility,Risk Level,Records,Model\n' +
+    rows.map(r=>`"${r.drug_name}",${r.current_vol.toFixed(4)},${r.risk_level},${r.n_shortages},"${r.model}"`).join('\n');
+  downloadFile('drug_shortage_risk.csv', csv);
+}
+function exportRawCSV() {
+  const csv = 'Drug Name,Status,Category,Company,Dosage Form,Reason,Posted\n' +
+    rawData.map(r=>`"${r.drug_name}","${r.status}","${r.category}","${r.company}","${r.dosage_form}","${r.reason}","${r.posted}"`).join('\n');
+  downloadFile('fda_shortage_raw.csv', csv);
+}
+function downloadFile(name, content) {
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(content);
+  a.download = name; a.click();
+  showToast('✓ Downloaded ' + name);
+}
+</script>
+</body>
+</html>
