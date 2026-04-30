@@ -1,9 +1,13 @@
 # 💊 Drug Shortage Early Warning System
 
-> **ORIE 5270 Final Project — Data Streams, Cornell University**  
+> **ORIE 5270 Final Project — Data Streams, Cornell University**
 > Detects and forecasts drug supply shortage risk using live FDA data and volatility modelling (EWMA + Historical Volatility + GARCH).
 
-🌐 **Live Demo:** `https://drug-shortage-alert.streamlit.app` *(after deployment — see Step 6)*
+## 🌐 Live Interactive Dashboard
+
+👉 **[Open Dashboard](https://harshsonar1998.github.io/Drug_Shortage_Forecaster/dashboard.html)**
+
+No installation needed — opens in any browser and fetches live FDA data directly. No Python, no servers.
 
 ---
 
@@ -12,12 +16,11 @@
 1. [Purpose](#1-purpose)
 2. [Dataset](#2-dataset)
 3. [Installation](#3-installation)
-4. [Running the Dashboard](#4-running-the-dashboard)
+4. [Running the Streamlit App](#4-running-the-streamlit-app)
 5. [Running the CLI Script](#5-running-the-cli-script)
 6. [Running Tests](#6-running-tests)
-7. [Deploy to Streamlit Cloud (Public URL)](#7-deploy-to-streamlit-cloud-public-url)
-8. [Project Structure](#8-project-structure)
-9. [API Reference](#9-api-reference)
+7. [Project Structure](#7-project-structure)
+8. [API Reference](#8-api-reference)
 
 ---
 
@@ -27,12 +30,12 @@ This package monitors the FDA drug shortage database and classifies every drug a
 
 **How it works:**
 1. Fetches live shortage records from the FDA openFDA API (no key required)
-2. For each drug, builds a monthly "shortage activity" time series
+2. For each drug, builds a monthly shortage-activity time series using `initial_posting_date`
 3. Computes month-over-month log-changes (analogous to stock log-returns)
-4. Applies EWMA and Historical Volatility models to measure how *unpredictable* each drug's shortage pattern is
-5. Classifies and ranks drugs by their current volatility reading
+4. Applies EWMA and Historical Volatility models to measure how unpredictable each drug's shortage pattern is
+5. Classifies and ranks every drug by its current volatility score
 
-**Why this matters:** High volatility = erratic shortage behaviour = higher risk of an unexpected stockout. Hospital supply chain teams can use this to prioritise procurement before a shortage peaks.
+**Why this matters:** High volatility = erratic shortage behaviour = higher risk of an unexpected stockout. Hospital supply chain teams can use this to prioritise procurement before a shortage peaks — the same way financial risk managers flag volatile assets before a market event.
 
 ---
 
@@ -43,12 +46,13 @@ This package monitors the FDA drug shortage database and classifies every drug a
 | Property | Value |
 |----------|-------|
 | URL | `https://api.fda.gov/drug/shortages.json` |
-| Auth | None required |
+| Authentication | None required |
 | Format | JSON |
 | Coverage | All FDA-reported drug shortages |
 | Update frequency | Continuously updated by FDA |
+| Key fields used | `generic_name`, `status`, `initial_posting_date`, `shortage_reason`, `therapeutic_category`, `company_name` |
 
-No manual download needed — data is fetched live every time you run the app.
+No manual download needed — data is fetched live every time you run the app or open the dashboard.
 
 ---
 
@@ -62,8 +66,8 @@ No manual download needed — data is fetched live every time you run the app.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/<your-username>/drug-shortage-forecaster.git
-cd drug-shortage-forecaster
+git clone https://github.com/harshsonar1998/Drug_Shortage_Forecaster.git
+cd Drug_Shortage_Forecaster
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
@@ -77,13 +81,13 @@ source .venv/bin/activate
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Install dev extras (for tests)
+# 4. Install dev extras (for running tests)
 pip install pytest pytest-cov
 ```
 
 ---
 
-## 4. Running the Dashboard
+## 4. Running the Streamlit App
 
 ```bash
 streamlit run app.py
@@ -91,11 +95,13 @@ streamlit run app.py
 
 Then open **http://localhost:8501** in your browser.
 
-**What you'll see:**
-- Sidebar to configure data fetch size, model parameters, and risk thresholds
-- **Risk Overview tab** — colour-coded table of all drugs + downloadable CSV
-- **Drug Deep Dive tab** — search any drug, see its volatility chart and shortage history
-- **Raw Data tab** — browse and filter all FDA records
+The Streamlit app provides the same functionality as the HTML dashboard but runs locally with Python. It includes:
+- Sidebar controls for data fetch size, model parameters, and risk thresholds
+- Risk Overview tab with colour-coded drug risk table and downloadable CSV
+- Drug Analysis tab with volatility chart and shortage history per drug
+- Raw Data tab to browse and filter all FDA records
+
+> **Tip:** You can also just open `dashboard.html` directly in Chrome — no Python needed.
 
 ---
 
@@ -108,8 +114,8 @@ python scripts\run_alert_scan.py
 # Fetch more records
 python scripts\run_alert_scan.py --limit 500
 
-# Filter to active shortages only
-python scripts\run_alert_scan.py --status active
+# Filter to current shortages only
+python scripts\run_alert_scan.py --status Current
 
 # Analyse one specific drug
 python scripts\run_alert_scan.py --drug AMOXICILLIN
@@ -123,7 +129,7 @@ python scripts\run_alert_scan.py --output risk_report.csv
 ## 6. Running Tests
 
 ```bash
-# Run all tests (from project root)
+# Run all tests from the project root
 python -m pytest tests -v
 
 # With coverage report
@@ -132,70 +138,41 @@ python -m pytest tests --cov=drug_shortage_forecaster --cov-report=term-missing
 
 Target coverage: **≥ 80%**
 
----
-
-## 7. Deploy to Streamlit Cloud (Public URL)
-
-Anyone in the world can use your app — no installation needed. Takes ~10 minutes.
-
-### Step-by-step
-
-**Step 1 — Push to GitHub**
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/<your-username>/drug-shortage-forecaster.git
-git push -u origin main
-```
-
-**Step 2 — Go to Streamlit Cloud**
-- Visit [share.streamlit.io](https://share.streamlit.io)
-- Sign in with your GitHub account
-
-**Step 3 — Deploy**
-- Click **"New app"**
-- Select your repository: `drug-shortage-forecaster`
-- Branch: `main`
-- Main file path: `app.py`
-- Click **"Deploy"**
-
-**Step 4 — Get your URL**
-- Streamlit builds and deploys automatically (~2 minutes)
-- You get a permanent public URL like:  
-  `https://drug-shortage-alert.streamlit.app`
-- Share this URL in your README and GitHub repo
-
-> **Note:** `requirements.txt` in the repo root tells Streamlit Cloud what to install. It is already included.
+Test files:
+- `tests/test_fetcher.py` — FDA API client and parser
+- `tests/test_processor.py` — Time series builder
+- `tests/test_models_and_alerts.py` — HV, EWMA, GARCH models and RiskDetector
+- `tests/test_utils.py` — Metrics (RMSE, MAE, MAPE) and plotting
 
 ---
 
-## 8. Project Structure
+## 7. Project Structure
 
 ```
-drug-shortage-forecaster/
-├── app.py                              ← Streamlit dashboard (run this)
-├── requirements.txt                    ← Dependencies for Streamlit Cloud
+Drug_Shortage_Forecaster/
+├── dashboard.html                      ← Standalone interactive dashboard (open in browser)
+├── app.py                              ← Streamlit dashboard (requires Python)
+├── requirements.txt                    ← Python dependencies
 ├── pyproject.toml                      ← Package metadata
 ├── README.md
 │
 ├── drug_shortage_forecaster/           ← Main Python package
-│   ├── __init__.py                     ← Public API
+│   ├── __init__.py                     ← Public API surface
 │   ├── data/
-│   │   ├── fetcher.py                  ← FDA API client
-│   │   └── processor.py               ← Time series builder
+│   │   ├── fetcher.py                  ← FDA openFDA API client
+│   │   └── processor.py               ← Monthly time-series builder
 │   ├── models/
-│   │   ├── historical.py              ← Rolling HV model
-│   │   ├── ewma.py                    ← EWMA model
-│   │   └── rolling_garch.py           ← GARCH(1,1) model
+│   │   ├── historical.py              ← Rolling Historical Volatility model
+│   │   ├── ewma.py                    ← EWMA (RiskMetrics) model
+│   │   └── rolling_garch.py           ← Rolling GARCH(1,1) model
 │   ├── alerts/
-│   │   └── detector.py                ← Risk classifier
+│   │   └── detector.py                ← Risk classifier (HIGH/MEDIUM/LOW)
 │   └── utils/
 │       ├── metrics.py                 ← RMSE, MAE, MAPE
-│       └── plotting.py                ← Charts
+│       └── plotting.py                ← Matplotlib chart helpers
 │
 ├── tests/
+│   ├── __init__.py
 │   ├── test_fetcher.py
 │   ├── test_processor.py
 │   ├── test_models_and_alerts.py
@@ -207,31 +184,33 @@ drug-shortage-forecaster/
 
 ---
 
-## 9. API Reference
+## 8. API Reference
 
 ### Data
 
 | Function | Description |
 |----------|-------------|
-| `fetch_shortage_data(limit, status)` | Fetch shortage records from FDA API |
+| `fetch_shortage_data(limit, status)` | Fetch shortage records from FDA openFDA API |
 | `build_shortage_series(df, drug_name)` | Build monthly log-change signal for one drug |
-| `build_activity_counts(df, drug_name)` | Raw monthly active-shortage counts |
+| `build_activity_counts(df, drug_name)` | Raw monthly shortage posting counts |
 | `list_drugs(df, min_records)` | List drugs with enough records to model |
 
 ### Models
 
+All models expose `.fit(signal)` and `.predict(signal)` returning a `pd.Series` of annualised volatility.
+
 | Class | Key parameter | Description |
 |-------|--------------|-------------|
-| `HistoricalVolModel(window=6)` | months | Rolling std dev, √12 annualized |
-| `EWMAVolModel(lam=0.8)` | decay factor | EWMA variance recursion |
-| `RollingGARCHModel(window=24)` | months | GARCH(1,1) on sliding window |
+| `HistoricalVolModel(window=6)` | `window` — months | Rolling std dev, √12 annualised |
+| `EWMAVolModel(lam=0.8)` | `lam` — decay factor | EWMA variance recursion |
+| `RollingGARCHModel(window=24)` | `window` — months | GARCH(1,1) re-estimated on sliding window |
 
 ### Alerts
 
-| Class | Description |
-|-------|-------------|
-| `RiskDetector(high_threshold, med_threshold)` | Scans all drugs and classifies HIGH/MEDIUM/LOW |
-| `detector.scan(df)` | Returns full risk table as DataFrame |
+| Class / Method | Description |
+|----------------|-------------|
+| `RiskDetector(high_threshold, med_threshold)` | Configure risk thresholds |
+| `detector.scan(df)` | Scan all drugs, return full risk table as `pd.DataFrame` |
 | `detector.filter_by_risk("HIGH")` | Filter results by risk level |
 
 ### Metrics
